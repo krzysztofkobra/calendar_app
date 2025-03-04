@@ -1,8 +1,10 @@
 import sys
 import os
 import pickle
+
 from PyQt5.QtWidgets import QMessageBox, QDialog
 from PyQt5.QtCore import QDateTime, QTime, Qt
+from PyQt5.QtGui import QIcon
 
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
@@ -38,16 +40,32 @@ def authenticate_google_api():
 class AddEvent(QDialog):
     def __init__(self):
         super().__init__()
+
         self.google_service = None
         self.init_visuals()
+
+        self.ui.repeat.currentIndexChanged.connect(self.activate_until)
         self.ui.confirmButton.clicked.connect(self.add_event)
+
         self.google_service = authenticate_google_api()
 
     def init_visuals(self):
         self.ui = AddEventUI()
         self.ui.setupUi(self)
         self.setWindowTitle("Add Event")
-        self.setFixedSize(400, 600)
+        self.setFixedSize(400, 560)
+
+        self.ui.untilLabel.setEnabled(False)
+        self.ui.untilDateTime.setEnabled(False)
+        self.ui.untilLabel.setVisible(False)
+        self.ui.untilDateTime.setVisible(False)
+
+        self.plus_icon_path = resource_path("res/img/plus.png")
+
+        self.ui.confirmButton.setIcon(QIcon(self.plus_icon_path))
+
+        self.ui.dateTime.setDateTime(QDateTime.currentDateTime())
+        self.ui.untilDateTime.setDateTime(QDateTime.currentDateTime())
 
     def check_values(self):
         currDateTime = QDateTime.currentDateTime()
@@ -64,21 +82,6 @@ class AddEvent(QDialog):
             return True
 
         return False
-
-    def set_google_service(self, service):
-        self.google_service = service
-
-    def sync_with_google(self, event):
-        if not self.google_service:
-            self.error = "Google service not initialized"
-            return False
-        try:
-            self.google_service.events().insert(calendarId='primary', body=event).execute()
-            return True
-        except Exception as e:
-            self.error = f"Google API Error: {e}"
-            print(f"Google API Error: {e}")
-            return False
 
     def add_event(self):
         if self.check_values():
@@ -105,5 +108,30 @@ class AddEvent(QDialog):
                 QMessageBox.warning(self, "Error", f"{self.error}")
         else:
             QMessageBox.warning(self, "Error", f"{self.error}")
-            print(f"{self.error}")
             return
+
+    def set_google_service(self, service):
+        self.google_service = service
+
+    def sync_with_google(self, event):
+        if not self.google_service:
+            self.error = "Google service not initialized"
+            return False
+        try:
+            self.google_service.events().insert(calendarId='primary', body=event).execute()
+            return True
+        except Exception as e:
+            self.error = f"Google API Error: {e}"
+            return False
+
+    def activate_until(self):
+        if self.ui.repeat.currentIndex() > 0:
+            self.ui.untilLabel.setEnabled(True)
+            self.ui.untilDateTime.setEnabled(True)
+            self.ui.untilLabel.setVisible(True)
+            self.ui.untilDateTime.setVisible(True)
+        else:
+            self.ui.untilLabel.setEnabled(False)
+            self.ui.untilDateTime.setEnabled(False)
+            self.ui.untilLabel.setVisible(False)
+            self.ui.untilDateTime.setVisible(False)
