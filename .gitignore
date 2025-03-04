@@ -1,0 +1,5 @@
+*.json
+.idea/
+__pycache__/
+*.ui
+*.pickle
