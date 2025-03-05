@@ -101,6 +101,11 @@ class AddEvent(QDialog):
                     'timeZone': 'UTC'
                 }
             }
+
+            recurrence_rule = self.get_repeat_rule()
+            if recurrence_rule:
+                event['recurrence'] = [recurrence_rule]
+
             if self.google_service and self.sync_with_google(event):
                 self.accept()
                 QMessageBox.information(self, "Info", "Event added!")
@@ -125,13 +130,23 @@ class AddEvent(QDialog):
             return False
 
     def activate_until(self):
-        if self.ui.repeat.currentIndex() > 0:
-            self.ui.untilLabel.setEnabled(True)
-            self.ui.untilDateTime.setEnabled(True)
-            self.ui.untilLabel.setVisible(True)
-            self.ui.untilDateTime.setVisible(True)
-        else:
-            self.ui.untilLabel.setEnabled(False)
-            self.ui.untilDateTime.setEnabled(False)
-            self.ui.untilLabel.setVisible(False)
-            self.ui.untilDateTime.setVisible(False)
+        is_enabled = self.ui.repeat.currentIndex() > 0
+        self.ui.untilLabel.setEnabled(is_enabled)
+        self.ui.untilDateTime.setEnabled(is_enabled)
+        self.ui.untilLabel.setVisible(is_enabled)
+        self.ui.untilDateTime.setVisible(is_enabled)
+
+    def get_repeat_rule(self):
+        until_date = self.ui.untilDateTime.dateTime()  # assuming ui.untilDateTime is your QDateTimeEdit
+
+        formatted_until = until_date.toUTC().toString("yyyyMMddTHHmmssZ")
+
+        repeat_options = {
+            1: f"RRULE:FREQ=DAILY;UNTIL={formatted_until}",
+            2: f"RRULE:FREQ=WEEKLY;BYDAY=SA,SU;UNTIL={formatted_until}",
+            3: f"RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;UNTIL={formatted_until}",
+        }
+
+        repeat_index = self.ui.repeat.currentIndex()
+
+        return repeat_options.get(repeat_index, None)
